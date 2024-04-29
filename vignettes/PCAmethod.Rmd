@@ -283,7 +283,7 @@ Therefore, we would expect to see PC1 with the highest eigenvalue, followed by
 PC2, and so on.
 
 ```{r}
-# ggscreeplot(music_clean)
+ggscreeplot(pc)
 ```
 
 Without grouping, we only see the axes of variation represented by PC1 and PC2. 
