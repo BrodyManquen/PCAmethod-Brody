@@ -175,15 +175,7 @@ values is assigned, contains the so-called \emph{standard coordinates} and have 
 values equal to 1.0.
 }
 \examples{
-data(wine)
 library(ggplot2)
-wine.pca <- prcomp(wine, scale. = TRUE)
-ggbiplot(wine.pca,
-         obs.scale = 1, var.scale = 1,
-         varname.size = 4,
-         groups = wine.class,
-         ellipse = TRUE, circle = TRUE)
-
 data(iris)
 iris.pca <- prcomp (~ Sepal.Length + Sepal.Width + Petal.Length + Petal.Width,
                     data=iris,
