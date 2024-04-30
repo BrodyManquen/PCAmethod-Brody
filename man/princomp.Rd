@@ -30,6 +30,6 @@ princomp(
 This function allows you to ...
 }
 \examples{
-princomp(x = music_clean)
+princomp(x = music_clean[ ,-15], cor = TRUE)
 }
 \keyword{pca}

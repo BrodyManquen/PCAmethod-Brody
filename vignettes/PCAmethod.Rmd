@@ -14,9 +14,21 @@ knitr::opts_chunk$set(collapse = TRUE, comment = "#>", echo = TRUE,
                       fig.width = 6, fig.height = 6)
 ```
 
+Load packages
+
 ```{r setup}
 library(PCAmethod)
+library(tidyverse) # data wrangling
+library(ggplot2) # data visualization
 ```
+
+## Installation {.unnumbered}
+
+You can install from GitHub as shown below.
+
++-------------------+-----------------------------------------------------------------+
+| GitHub            | `remotes::install_github("ecarlson5683/PCAmethod")`             |
++-------------------+-----------------------------------------------------------------+
 
 ## Overview {.unnumbered}
 
@@ -27,6 +39,8 @@ directions of maximum variance in the original high-dimensional data and
 projecting it onto a lower-dimensional space while collating highly correlated 
 variables together (and retaining most of the information).
 
+## References {.unnumbered}
+
 This vignette was based on the following sources:
 
 * [Principal Component Analysis in R Tutorial](https://www.datacamp.com/tutorial/pca-analysis-r)
@@ -36,7 +50,7 @@ This vignette was based on the following sources:
 * `princomp` function: 
   - R Core Team (2022). _R: A language and environment for statistical computing_. R Foundation
   for Statistical Computing, Vienna, Austria. <https://www.R-project.org/>.
-* `ggbiplot` function:
+* `ggscreeplot` and `ggbiplot`  functions:
   - Vu VQ, Friendly M (2024). _ggbiplot: A Grammar of Graphics Implementation of Biplots_.
   R package version 0.6.2, <https://CRAN.R-project.org/package=ggbiplot>.
 
@@ -58,7 +72,7 @@ onward. In the example about human longevity, 200 variables associated with
 lifespan can be condensed down to 5 principal components. 
 
 <div style="text-align: center;">
-<img src="https://github.com/ecarlson5683/PCAmethod/blob/main/pics/Fig1.png?raw=true" width="75%" height="75%">
+<img src="https://github.com/ecarlson5683/PCAmethod/blob/main/images/Fig1.png?raw=true" width="75%" height="75%">
 </div>
 
 #### How does a PCA pick its components? 
@@ -78,7 +92,7 @@ to PC1. Remember PC1 is the **most important PC** as it explains the greatest
 amount of the variation in the data set.
 
 <div style="text-align: center;">
-<img src="https://github.com/ecarlson5683/PCAmethod/blob/main/pics/Fig3.png?raw=true" width="75%" height="75%">
+<img src="https://github.com/ecarlson5683/PCAmethod/blob/main/images/Fig3.png?raw=true" width="75%" height="75%">
 </div>
 
 We can also plot the **loadings** to see the relationship between all the 
@@ -89,7 +103,7 @@ PCA plot. This is the principal components **loadings** plot, and the plotted
 points do **not** represent the individual humans.
 
 <div style="text-align: center;">
-<img src="https://github.com/ecarlson5683/PCAmethod/blob/main/pics/Fig4.png?raw=true" width="75%" height="75%">
+<img src="https://github.com/ecarlson5683/PCAmethod/blob/main/images/Fig4.png?raw=true" width="75%" height="75%">
 </div>
 
 Additionally, a variable's location from the origin is important. The farther 
@@ -97,7 +111,7 @@ the variable is from the origin, the stronger its impact on the statistical
 model. 
 
 <div style="text-align: center;">
-<img src="https://github.com/ecarlson5683/PCAmethod/blob/main/pics/Fig5.png?raw=true" width="75%" height="75%">
+<img src="https://github.com/ecarlson5683/PCAmethod/blob/main/images/Fig5.png?raw=true" width="75%" height="75%">
 </div>
 
 #### How is a PCA conducted? 
@@ -157,7 +171,7 @@ differences along the PC1 axis are larger than similar looking distances along
 PC2.
 
 <div style="text-align: center;">
-<img src="https://github.com/ecarlson5683/PCAmethod/blob/main/pics/Fig7.png?raw=true" width="75%" height="75%">
+<img src="https://github.com/ecarlson5683/PCAmethod/blob/main/images/Fig7.png?raw=true" width="75%" height="75%">
 </div>
 
 #### Applications for PCA 
@@ -188,18 +202,11 @@ milliseconds and time_signature). **Class** is the target variable (genre)
 ranging from 0-11 and indicating Rock, Indie, Alt, Pop, Metal, HipHop, 
 Alt_Music, Blues, Acoustic/Folk, Instrumental, Country, or Bollywood.
 
-#### Preliminaries
-
-Load the package dependencies
-```{r, warning = FALSE}
-library(tidyverse)
-library(ggplot2)
-```
-
 #### Inspect the **music** data set
 
 Check the data set and determine which variables are qualitative and which are 
-quantitative. Also determine which variables would require standardization.
+quantitative. Also determine whether the data set requires standardization 
+(i.e., are all variables on the same scale?).
 ```{r}
 head(music)
 summary(music)
@@ -208,8 +215,7 @@ summary(music)
 #### Clean the **music** data set
 
 PCA only works with numerical values. So, we need to remove **Artist Name** and 
-**Track Name** columns. Also, the **Class** column refers to the genres 
-themselves and is our grouping variable.
+**Track Name** columns.
 
 The code below creates a new data frame with only numeric columns. It also 
 removes rows (songs) containing NA values. `nrow()` tells us how many songs 
@@ -221,13 +227,37 @@ head(music_clean)
 nrow(music_clean)
 ```
 
+The **Class** column refers to the genres themselves and is our grouping 
+variable. We will convert this column from numbers to informative labels, and 
+hide it from our PCA analysis function `princomp()` later on.
+
+```{r}
+music_clean$Class <- as.factor(music_clean$Class)
+levels(music_clean$Class) <- c("Rock", "Indie", "Alt", "Pop", "Metal", "Hip Hop", "Alt_Music", "Blues", "Acoustic/Folk", "Instrumental", "Country")
+```
+
 ### Use `princomp` function to run PCA
 
 `princomp()` performs a principal components analysis on the given numeric data 
 matrix, passed in as argument `x`, and returns the results as an object of class 
-**princomp**. The `cor` argument is a logical value indicating whether the 
+"princomp". The `cor` argument is a logical value indicating whether the 
 calculation should use the correlation matrix (standardized) instead of the 
 covariance matrix and defaults to `FALSE`.
+
+The calculation is done using `eigen` on the correlation or covariance matrix, 
+as determined by `cor`. A preferred method of calculation is to use `svd` 
+(Singular Value Decomposition) on `x`. The number of components is equal to the 
+number of input variables. 
+
+The return is a list with class "princomp" containing components including: 
+
+* `sdev` the standard deviations of the principal components
+* `loadings` the matrix of variable loadings (i.e., a matrix whose columns contain the eigenvectors). This is of class "loadings"
+* `center` the means that were subtracted.
+* `scale` the scalings applied to each variable.
+* `n.obs` the number of observations.
+* `scores`	if `scores = TRUE`, the scores of the supplied data on the principal components. These are non-null only if `x` was supplied, and if `covmat` was also supplied if it was a covariance list.
+* `call` the matched call.
 
 This function is from the {stats} package in base R.
 
@@ -237,8 +267,12 @@ important components, as the base assumption is that all variables are on the
 same scale so greater variance = more explanatory power. However, if all 
 variables were measured on the same scale, you could use the covariance matrix.
 
+As previously noted, we are hiding the Class column from `princomp()` so our 
+grouping variable is not included in the correlation matrix. We are including 
+14 variables so there will be 14 components.
+
 ```{r}
-pc <- princomp(x = music_clean[, -1], cor = TRUE)
+pc <- princomp(x = music_clean |> select(-"Class"), cor = TRUE)
 ```
 
 `summary()` returns the three elements of the PCA: [1] Standard Deviation, 
@@ -258,33 +292,36 @@ this to the most (or least) explanatory PCs by specifying the columns.
 pc$loadings[, c(1:4, 13:14)]
 ```
 
-### Step 3: Use `ggbiplot` and `ggscreeplot` function to visualize PCA
-
-`ggbiplot()` takes the following arguments [1] `pcobj` object returned by a 
-function performing PCA, [2] `groups`, an optional factor variable indicating 
-the groups that the observations belong to. If provided the points will be 
-colored according to groups.
-
-This function is from the {ggbiplot} package created by Vincent Q Vu.
-https://github.com/friendly/ggbiplot
-
-Some data cleaning for presentation.
-
-```{r}
-music_clean$Class <- as.factor(music_clean$Class)
-levels(music_clean$Class) <- c("Rock", "Indie", "Alt", "Pop", "Metal", "Hip Hop", "Alt_Music", "Blues", "Acoustic/Folk", "Instrumental", "Country")
-```
+### Step 3: Use `ggscreeplot` and `ggbiplot` functions to visualize PCA
 
 Prior to creating our PCA plot, we need to check the scree plot. A scree plot is 
 a simple line segment plot that shows the eigenvalues for each individual PC in
-a decreasing order. In other words, a scree plot shows the variance explained by
-each component in the PCA, starting with the component that explains the most.
-Therefore, we would expect to see PC1 with the highest eigenvalue, followed by
-PC2, and so on.
+a decreasing order. In other words, a scree plot shows the amount of variance 
+explained by each component in the PCA, starting with the component that 
+explains the most. Therefore, we would expect to see PC1 with the highest 
+eigenvalue, followed by PC2, and so on.
+
+`ggscreeplot()` takes the following arguments: [1] `pcobj` object returned by a 
+function performing PCA (`prcomp()` or `princomp()`), [2] the `type` of scree 
+plot (default = c('pev', 'cev')). 'pev' corresponds proportion of explained 
+variance, i.e. the eigenvalues divided by the trace. 'cev' corresponds to the 
+cumulative proportion of explained variance, i.e. the partial sum of the first 
+k eigenvalues divided by the trace.
 
 ```{r}
 ggscreeplot(pc)
 ```
+
+Now we can create a PCA plot of the observations in the dimensional space of the 
+two most explanatory PCs (PC1 and PC2).
+ 
+`ggbiplot()` takes the following arguments: [1] `pcobj` object returned by a 
+function performing PCA, [2] `groups`, an optional factor variable indicating 
+the groups that the observations belong to. If provided the points will be 
+colored according to groups.
+
+These functions are from the {ggbiplot} package created by Vincent Q Vu.
+https://github.com/friendly/ggbiplot
 
 Without grouping, we only see the axes of variation represented by PC1 and PC2. 
 Some trends are visible, such as "acousticness" and "energy" moving in 
@@ -319,9 +356,6 @@ ggbiplot(pc, var.scale = 1, varname.adjust = 1.2, point.size=1, alpha=0.05, grou
   theme(axis.line.x = element_line(color="black", linewidth = 0.8),
   axis.line.y = element_line(color="black", linewidth = 0.8)) 
 ```
-
-How much of the variance in the data set is explained by PC1? By PC2? Which 
-variables contribute to PC1 (and explain the greatest amount of variance)? 
 
 We can also specify which PCs we plot using the `choices` argument. Below, PC 2 and 3 are selected. Clusters are far less apparent.
 

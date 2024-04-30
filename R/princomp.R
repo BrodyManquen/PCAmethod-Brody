@@ -11,7 +11,7 @@
 #' @keywords pca
 #' @export
 #' @examples
-#' princomp(x = music_clean)
+#' princomp(x = music_clean[ ,-15], cor = TRUE)
 
 princomp <-
   function(x, cor = FALSE, scores = TRUE, covmat = NULL,
